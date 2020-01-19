@@ -4,7 +4,11 @@ class Game {
 	Scanner kb = new Scanner(System.in);
 	private char[][] board;
 	
-	
+	/*
+	constructor, takes PVP, PVC, or CVP
+	informs which players are computers
+	first letter is white, second is black (White plays first)
+	*/
 	public Game(String gametype) {
 		board = new char[8][8];
 		for (int x = 0; x < 8; x++){
@@ -16,16 +20,20 @@ class Game {
 		board[4][4] = 'W';
 		board[3][4] = 'B';
 		board[4][3] = 'B';
-		this.loop(gametype);
+		this.loop(gametype.toUpperCase());
 	}
 
+	//main loop, runs until game is over, takes game type (see constructor)
 	public void loop (String type){
 		boolean exit;
 		this.display();
 		
-		while (!this.isOver()){
+		while (whiteCanPlay() || blackCanPlay()){
 			exit = false;
 			do {
+				if (!whiteCanPlay()){
+					break;
+				}
 				switch (type){
 					case ("PVP"):
 						exit = whitePMove();
@@ -41,6 +49,9 @@ class Game {
 			exit = false;
 			
 			do {
+				if (!blackCanPlay()){
+					break;
+				}
 				switch (type){
 					case ("PVP"):
 						exit = blackPMove();
@@ -58,6 +69,7 @@ class Game {
 		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
 	}
 
+	//prints the board in a human readable manner to console
 	public void display(){
 		int i = 0;
 		while (i < 3){
@@ -82,6 +94,7 @@ class Game {
 		}
 	}
 	
+	//returns # of white and black pieces on the board, respectively
 	public int whiteScore(){
 		int s = 0;
 		for (int x = 0; x < 8; x++){
@@ -105,9 +118,15 @@ class Game {
 		return s;
 	}
 
-
+	/*
+	player moves, takes input from console, x enter, y enter
+	from here, legalWMove and legalBMove are called
+	only allows legal moves, otherwise prompts for another attempt
+	*/
 	public boolean whitePMove(){
+		System.out.print("X Coordinate? ");
 		int x = kb.nextInt();
+		System.out.print("Y Coordinate? ");
 		int y = kb.nextInt();
 		if (x > 7 || x < 0 || y > 7 || y < 0){
 			System.out.println("Should be 0-7");
@@ -116,6 +135,7 @@ class Game {
 		
 		if (legalWMove(x,y)){
 			board[x][y] = 'W';
+			flipToWhite(x,y);
 			this.display();
 			return true;
 		} else {
@@ -125,7 +145,9 @@ class Game {
 		
 	}
 	public boolean blackPMove(){ 
+		System.out.print("X Coordinate? ");
 		int x = kb.nextInt();
+		System.out.print("Y Coordinate? ");
 		int y = kb.nextInt();
 		if (x > 7 || x < 0 || y > 7 || y < 0){
 			System.out.println("Should be 0-7");
@@ -134,6 +156,7 @@ class Game {
 		
 		if (legalBMove(x,y)){
 			board[x][y] = 'B';
+			flipToBlack(x,y);
 			this.display();
 			return true;
 		} else {
@@ -142,6 +165,7 @@ class Game {
 		}
 	}
 
+	//TODO computer plays for one player
 	public boolean whiteCMove(){
 		//TODO
 		return false;
@@ -151,18 +175,30 @@ class Game {
 		return false;
 	}
 	
-	public boolean isOver(){
+	//checks if legal moves exist
+	public boolean whiteCanPlay(){
 		for (int x = 0; x < 8; x++){
 			for (int y = 0; y < 8; y++){
-				if (legalWMove(x,y) || legalBMove(x,y)){
-					return false;
+				if (legalWMove(x,y)){
+					return true;
 				}
 			}
 		}
-		return true;
+		return false;
+	}
+	public boolean blackCanPlay(){
+		for (int x = 0; x < 8; x++){
+			for (int y = 0; y < 8; y++){
+				if (legalBMove(x,y)){
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
-	public boolean legalWMove (int x, int y){
+	//check to see if x,y move is legal for the relevant color
+	private boolean legalWMove (int x, int y){
 		boolean isBlack[] = new boolean[8];
 		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
 				
@@ -196,7 +232,7 @@ class Game {
 		}
 		return false;
 	}
-	public boolean legalBMove (int x, int y){
+	private boolean legalBMove (int x, int y){
 		boolean isWhite[] = new boolean[8];
 		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
 				
@@ -231,8 +267,16 @@ class Game {
 		return false;
 	}
 	
-	//tests for black line w/ 1 white end, moving away from open end
-	public boolean validWLine(int x, int y, int move[]){
+	/*
+	called by legalWMove/legalBMove
+	checks for a line followed by a dot of the oposite color
+	validWline is a line that can be played on by white
+	so VWL looks for BBBW, if given
+	the x and y are not the coords of the empty end,
+		but the coords of the first black piece in the line
+	hacky and gross, do not touch or call.
+	*/
+	private boolean validWLine(int x, int y, int move[]){
 			int xtest = x+move[0];
 			int ytest = y+move[1];
 
@@ -251,7 +295,7 @@ class Game {
 				ytest += move[1];
 			}		
 	}
-	public boolean validBLine(int x, int y, int move[]){
+	private boolean validBLine(int x, int y, int move[]){
 		int xtest = x+move[0];
 		int ytest = y+move[1];
 
@@ -268,6 +312,66 @@ class Game {
 			}
 			xtest += move[0];
 			ytest += move[1];
+		}
+	}
+	
+	//takes x and y of new placement
+	private void flipToWhite(int x, int y){
+		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
+		boolean lineToBeFlipped[] = new boolean[8];
+		for (int i = 0; i < 8; i++){
+			lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'B';
+		}
+		for (int j = 0; j < 8; j++){
+			if (lineToBeFlipped[j]){
+				lineToBeFlipped[j] = validWLine(x + order[j][0], y + order[j][1], order[j]);
+			}
+		}
+		int move[];
+		for (int k = 0; k < 8; k++){
+			move = order[k];
+			int xtest = x + move[0];
+			int ytest = y + move[1];
+			if (lineToBeFlipped[k]){
+				while (true){
+					if (board[xtest][ytest] == 'B'){
+						board[xtest][ytest] = 'W';
+					} else {
+						break;
+					}
+					xtest += move[0];
+					ytest += move[1];
+				}
+			}
+		}
+	}
+	private void flipToBlack(int x, int y){
+		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
+		boolean lineToBeFlipped[] = new boolean[8];
+		for (int i = 0; i < 8; i++){
+			lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'W';
+		}
+		for (int j = 0; j < 8; j++){
+			if (lineToBeFlipped[j]){
+				lineToBeFlipped[j] = validWLine(x + order[j][0], y + order[j][1], order[j]);
+			}
+		}
+		int move[];
+		for (int k = 0; k < 8; k++){
+			move = order[k];
+			int xtest = x + move[0];
+			int ytest = y + move[1];
+			if (lineToBeFlipped[k]){
+				while (true){
+					if (board[xtest][ytest] == 'W'){
+						board[xtest][ytest] = 'B';
+					} else {
+						break;
+					}
+					xtest += move[0];
+					ytest += move[1];
+				}
+			}
 		}
 	}
 
