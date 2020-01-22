@@ -3,6 +3,7 @@ import java.util.Scanner;
 class Game {
 	Scanner kb = new Scanner(System.in);
 	private char[][] board;
+	private final int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1, 0}};
 	
 	/*
 	constructor, takes PVP, PVC, or CVP
@@ -200,7 +201,6 @@ class Game {
 	//check to see if x,y move is legal for the relevant color
 	private boolean legalWMove (int x, int y){
 		boolean isBlack[] = new boolean[8];
-		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
 				
 		if (board[x][y] != ' '){
 			System.out.println("That tile is filled");
@@ -234,7 +234,7 @@ class Game {
 	}
 	private boolean legalBMove (int x, int y){
 		boolean isWhite[] = new boolean[8];
-		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
+		
 				
 		if (board[x][y] != ' '){
 			System.out.println("That tile is filled");
@@ -317,10 +317,14 @@ class Game {
 	
 	//takes x and y of new placement
 	private void flipToWhite(int x, int y){
-		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
+		
 		boolean lineToBeFlipped[] = new boolean[8];
 		for (int i = 0; i < 8; i++){
-			lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'B';
+			if (x + order[i][0] > 7 || x + order[i][0] < 0 || y + order[i][1] > 7 || y + order[i][1] < 0){
+				lineToBeFlipped[i] = false;
+			} else {
+				lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'B';
+			}
 		}
 		for (int j = 0; j < 8; j++){
 			if (lineToBeFlipped[j]){
@@ -346,14 +350,18 @@ class Game {
 		}
 	}
 	private void flipToBlack(int x, int y){
-		int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,-1}, {0,1}, {-1,1}, {-1, 0}};
+		
 		boolean lineToBeFlipped[] = new boolean[8];
 		for (int i = 0; i < 8; i++){
-			lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'W';
+			if (x + order[i][0] > 7 || x + order[i][0] < 0 || y + order[i][1] > 7 || y + order[i][1] < 0){
+				lineToBeFlipped[i] = false;
+			} else {
+				lineToBeFlipped[i] = (board[x + order[i][0]][y + order[i][1]]) == 'W';
+			}
 		}
 		for (int j = 0; j < 8; j++){
 			if (lineToBeFlipped[j]){
-				lineToBeFlipped[j] = validWLine(x + order[j][0], y + order[j][1], order[j]);
+				lineToBeFlipped[j] = validBLine(x + order[j][0], y + order[j][1], order[j]);
 			}
 		}
 		int move[];
