@@ -21,55 +21,103 @@ class Game {
 		board[4][4] = 'W';
 		board[3][4] = 'B';
 		board[4][3] = 'B';
-		this.loop(gametype.toUpperCase());
+		if (gametype.toUpperCase().equals("PVP")){
+			this.PVPLoop();
+		} else if (gametype.toUpperCase().equals("PVC")){
+			this.PVCLoop();
+		} else if (gametype.toUpperCase().equals("CVP")){
+			this.CVPLoop();
+		} else if (gametype.toUpperCase().equals("CVC")){
+			this.CVCLoop();
+		}
 	}
 
-	//main loop, runs until game is over, takes game type (see constructor)
-	public void loop (String type){
+	//loop for PVP games (see constructor)
+	private void PVPLoop(){
 		boolean exit;
 		this.display();
-		
-		while (whiteCanPlay() || blackCanPlay()){
-			exit = false;
+		while (true){
 			do {
-				if (!whiteCanPlay()){
-					break;
-				}
-				switch (type){
-					case ("PVP"):
-						exit = whitePMove();
-						break;
-					case ("PVC"):
-						exit = whitePMove();
-						break;
-					case ("CVP"):
-						exit = whiteCMove();
-						break;
-				}
+				exit = blackPMove();
 			} while (!exit);
-			exit = false;
+			
+			this.display();
 			
 			do {
-				if (!blackCanPlay()){
-					break;
-				}
-				switch (type){
-					case ("PVP"):
-						exit = blackPMove();
-						break;
-					case ("PVC"):
-						exit = blackCMove();
-						break;
-					case ("CVP"):
-						exit = blackPMove();
-						break;
-				}
+				exit = whitePMove();
 			} while (!exit);
-			exit = false;
+			
+			this.display();
+			
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			}
 		}
 		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
 	}
 
+	//loop for PVC games
+	private void PVCLoop(){
+		boolean exit;
+		this.display();
+		while (true){
+			do {
+				exit = blackPMove();
+			} while (!exit);
+			
+			this.display();
+			
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (whiteCanPlay()){
+				CompWPlayer c = new CompWPlayer(this);
+				this.display();
+			}
+		}
+		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
+	}
+	
+	//loop for CVP games
+	private void CVPLoop(){
+		boolean exit;
+		this.display();
+		while (true){
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (blackCanPlay()){
+				CompBPlayer c = new CompBPlayer(this);
+				this.display();
+			}
+			
+			do {
+				exit = whitePMove();
+			} while (!exit);
+			
+			this.display();
+		}
+		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
+	}
+	
+	private void CVCLoop(){
+		this.display();
+		while (true){
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (blackCanPlay()){
+				CompBPlayer b = new CompBPlayer(this);
+				this.display();
+			} 
+			
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (whiteCanPlay()){
+				CompWPlayer w = new CompWPlayer(this);
+				this.display();
+			}
+		}
+		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
+	}
+	
 	//prints the board in a human readable manner to console
 	public void display(){
 		int i = 0;
@@ -78,21 +126,56 @@ class Game {
 			i++;
 		}
 		System.out.println("Displaying the board");
+		String temp;
 		
-		for (int y = -1; y < 8; y++){
-			if (y == -1){
-				System.out.println("#01234567");
+		for (int y = -1; y < 9; y++){
+			if (y == -1 || y == 8){
+				System.out.println("\u001B[34;42m#01234567#\u001B[0m");
 			} else {
-				for (int x = -1; x < 8; x++){
-					if (x == -1){
-						System.out.print(y);
+				for (int x = -1; x < 9; x++){
+					if (x == -1 || x == 8){
+						System.out.print("\u001B[34;42m"+y+"\u001B[0m");
 					} else {
-						System.out.print(board[x][y]);
+						temp = String.valueOf(board[x][y]);
+						if (temp.equals("W")){
+							temp = "\u001B[97;42m" + temp + "\u001B[0m";
+						} else if (temp.equals("B")){
+							temp = "\u001B[30;42m" + temp + "\u001B[0m";
+						} else {
+							temp = "\u001B[42m" + temp + "\u001B[0m";
+						}
+						System.out.print(temp);
 					}
 				}
 			System.out.println();
 			}
 		}
+	}
+	
+	public char[][] getBoard(){
+		return this.board;
+	}
+	
+	//a.copy(b) sets a to be identical to b
+	public void copy(Game g){
+		for (int x = 0; x < 8; x++){
+			for (int y = 0; y < 8; y++){
+				this.board[x][y] = g.board[x][y];
+			}	
+		}
+	}
+	
+	//returns what turn was last played, should be 0 to 60, before and moves and after the last
+	public int turnNum(){
+		int num = -4;
+		for (int x = 0; x < 8; x++){
+			for (int y = 0; y < 8; y++){
+				if (board[x][y] != ' '){
+					num++;
+				}
+			}
+		}
+		return num;
 	}
 	
 	//returns # of white and black pieces on the board, respectively
@@ -125,6 +208,10 @@ class Game {
 	only allows legal moves, otherwise prompts for another attempt
 	*/
 	public boolean whitePMove(){
+		if (!whiteCanPlay()){
+			return true;
+		}
+	
 		System.out.print("X Coordinate? ");
 		int x = kb.nextInt();
 		System.out.print("Y Coordinate? ");
@@ -137,7 +224,6 @@ class Game {
 		if (legalWMove(x,y)){
 			board[x][y] = 'W';
 			flipToWhite(x,y);
-			this.display();
 			return true;
 		} else {
 			System.out.println("Ilegal: White move?");
@@ -146,6 +232,10 @@ class Game {
 		
 	}
 	public boolean blackPMove(){ 
+		if (!blackCanPlay()){
+			return true;
+		}
+	
 		System.out.print("X Coordinate? ");
 		int x = kb.nextInt();
 		System.out.print("Y Coordinate? ");
@@ -158,7 +248,6 @@ class Game {
 		if (legalBMove(x,y)){
 			board[x][y] = 'B';
 			flipToBlack(x,y);
-			this.display();
 			return true;
 		} else {
 			System.out.println("Ilegal: Black move?");
@@ -166,14 +255,15 @@ class Game {
 		}
 	}
 
-	//TODO computer plays for one player
-	public boolean whiteCMove(){
-		//TODO
-		return false;
-	}
-	public boolean blackCMove(){
-		//TODO
-		return false;
+	//changed the board state, used externally, assumes move is legal
+	public void externalMove(int x, int y, char color){
+		if (color == 'W'){
+			board[x][y] = 'W';
+			this.flipToWhite(x,y);
+		} else {
+			board[x][y] = 'B';
+			this.flipToBlack(x,y);
+		}
 	}
 	
 	//checks if legal moves exist
@@ -199,11 +289,10 @@ class Game {
 	}
 
 	//check to see if x,y move is legal for the relevant color
-	private boolean legalWMove (int x, int y){
+	public boolean legalWMove (int x, int y){
 		boolean isBlack[] = new boolean[8];
 				
 		if (board[x][y] != ' '){
-			System.out.println("That tile is filled");
 			return false;
 		}	
 			
@@ -232,12 +321,11 @@ class Game {
 		}
 		return false;
 	}
-	private boolean legalBMove (int x, int y){
+	public boolean legalBMove (int x, int y){
 		boolean isWhite[] = new boolean[8];
 		
 				
 		if (board[x][y] != ' '){
-			System.out.println("That tile is filled");
 			return false;
 		}	
 			
