@@ -1,17 +1,30 @@
 import java.util.Scanner;
+import java.io.FileWriter;
 
 class Game {
 	Scanner kb = new Scanner(System.in);
 	private char[][] board;
 	private final int order[][] = {{-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1, 0}};
+	private final double steepness1, cutoff1, steepness2, cutoff2;
 	
 	/*
-	constructor, takes PVP, PVC, or CVP
+	constructor, takes game type
 	informs which players are computers
 	first letter is white, second is black (White plays first)
+	does nothing if no type is passed,
+	CVCS will only work with the correct data passed (no not mess with)
 	*/
-	public Game(String gametype) {
+	public Game (String gt){
+		this(gt,"",5,45,5,45);
+	}
+	public Game(String gametype, String filePath, double s1, double c1,
+			double s2, double c2) {
+		steepness1 = s1;
+		cutoff1 = c1;
+		steepness2 = s2;
+		cutoff2 = c2;
 		board = new char[8][8];
+		
 		for (int x = 0; x < 8; x++){
 			for (int y = 0; y < 8; y++){
 				board[x][y] = ' ';
@@ -21,6 +34,7 @@ class Game {
 		board[4][4] = 'W';
 		board[3][4] = 'B';
 		board[4][3] = 'B';
+		
 		if (gametype.toUpperCase().equals("PVP")){
 			this.PVPLoop();
 		} else if (gametype.toUpperCase().equals("PVC")){
@@ -29,6 +43,13 @@ class Game {
 			this.CVPLoop();
 		} else if (gametype.toUpperCase().equals("CVC")){
 			this.CVCLoop();
+		} else if (gametype.toUpperCase().equals("CVCS")){
+			int output = this.CVCSLoop();
+			try {
+				FileWriter fw = new FileWriter(filePath, true);
+				fw.append("\n" + Integer.toString(output));
+				fw.close();
+			} catch (Exception e) {e.printStackTrace();}
 		}
 	}
 
@@ -98,15 +119,22 @@ class Game {
 		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
 	}
 	
+	//Comp v comp games, verbose, waits between move for enter key
 	private void CVCLoop(){
+		Scanner kb = new Scanner(System.in);
 		this.display();
+		String timer = ""; 
 		while (true){
 			if (!(whiteCanPlay() || blackCanPlay())){
 				break;
 			} else if (blackCanPlay()){
 				CompBPlayer b = new CompBPlayer(this);
 				this.display();
+			}
+			while (!timer.isEmpty()){
+				timer = kb.nextLine();
 			} 
+			timer = "a";
 			
 			if (!(whiteCanPlay() || blackCanPlay())){
 				break;
@@ -114,8 +142,31 @@ class Game {
 				CompWPlayer w = new CompWPlayer(this);
 				this.display();
 			}
+			
+			while (!timer.isEmpty()){
+				timer = kb.nextLine();
+			}
+			timer = "a";
 		}
 		System.out.println("White: " + this.whiteScore() + " Black: " + this.blackScore());
+	}
+	
+	//comp v comp, silent, returns 1 if black won, -1 if white won, and 0 if draw
+	private int CVCSLoop(){
+		while (true){
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (blackCanPlay()){
+				CompBPlayer b = new CompBPlayer(this, steepness1, cutoff1);
+			} 
+			
+			if (!(whiteCanPlay() || blackCanPlay())){
+				break;
+			} else if (whiteCanPlay()){
+				CompWPlayer w = new CompWPlayer(this, steepness2, cutoff2);
+			}
+		}
+		return this.blackScore()-this.whiteScore();
 	}
 	
 	//prints the board in a human readable manner to console
@@ -127,22 +178,24 @@ class Game {
 		}
 		System.out.println("Displaying the board");
 		String temp;
+		int color;
 		
 		for (int y = -1; y < 9; y++){
 			if (y == -1 || y == 8){
 				System.out.println("\u001B[34;42m#01234567#\u001B[0m");
 			} else {
 				for (int x = -1; x < 9; x++){
+					color = ((y+x)%2 == 1)? 42:43;
 					if (x == -1 || x == 8){
-						System.out.print("\u001B[34;42m"+y+"\u001B[0m");
+						System.out.print("\u001B[34;"+42+"m"+y+"\u001B[0m");
 					} else {
 						temp = String.valueOf(board[x][y]);
 						if (temp.equals("W")){
-							temp = "\u001B[97;42m" + temp + "\u001B[0m";
+							temp = "\u001B[97;"+color+"m" + temp + "\u001B[0m";
 						} else if (temp.equals("B")){
-							temp = "\u001B[30;42m" + temp + "\u001B[0m";
+							temp = "\u001B[30;"+color+"m" + temp + "\u001B[0m";
 						} else {
-							temp = "\u001B[42m" + temp + "\u001B[0m";
+							temp = "\u001B["+color+"m" + temp + "\u001B[0m";
 						}
 						System.out.print(temp);
 					}
@@ -154,6 +207,16 @@ class Game {
 	
 	public char[][] getBoard(){
 		return this.board;
+	} //unclear if this is needed
+	
+	/*
+	returns value of logistic growth
+	0 < cut < 60
+	0 < x < 60
+	steep = 5ish
+	*/
+	public static double logistic (double steep, double cut, int x){
+		return 1/(1 + Math.exp(-1*steep*(x - cut)));
 	}
 	
 	//a.copy(b) sets a to be identical to b

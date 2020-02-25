@@ -2,44 +2,51 @@ import java.util.ArrayList;
 
 class CompBPlayer {
 	private byte[][] valueMap1 = new byte[][]{
-		{10,-5,0,0,0,0,-5,10},
-		{-5,-5,0,0,0,0,-5,-5},
-		{0,0,8,8,8,8,0,0},
-		{0,0,8,9,9,8,0,0},
-		{0,0,8,9,9,8,0,0},
-		{0,0,8,8,8,8,0,0},
-		{-5,-5,0,0,0,0,-5,-5},
-		{10,-5,0,0,0,0,-5,10}
+		{30,-20,5,5,5,5,-20,30},
+		{-20,-20,3,3,3,3,-20,-20},
+		{5,3,5,5,5,5,3,5},
+		{5,3,5,5,5,5,3,5},
+		{5,3,5,5,5,5,3,5},
+		{5,3,5,5,5,5,3,5},
+		{-20,-20,3,3,3,3,-20,-20},
+		{30,-20,5,5,5,5,-20,30}
 		}; //cannot do inside constructor
 	private byte[][] valueMap2 = new byte[][]{
-		{10,-3,8,8,8,8,-3,10},
-		{-3,-3,8,0,0,8,-3,-3},
-		{8,8,9,0,0,9,8,8},
-		{8,0,0,7,7,0,0,8},
-		{8,0,0,7,7,0,0,8},
-		{8,8,9,0,0,9,8,8},
-		{-3,-3,8,0,0,8,-3,-3},
-		{10,-3,8,8,8,8,-3,10}
+		{30,-20,5,5,5,5,-10,30},
+		{-20,-20,5,3,3,5,-10,-10},
+		{5,5,5,3,3,5,5,5},
+		{5,3,3,7,7,3,3,5},
+		{5,3,3,7,7,3,3,5},
+		{5,5,5,3,3,5,5,5},
+		{-20,-20,5,3,3,5,-20,-20},
+		{30,-20,5,5,5,5,-20,30}
 		};
 	private byte[][] valueMap3 = new byte[][]{
-		{10,8,8,8,8,8,8,10},
-		{8,7,7,1,1,7,7,8},
+		{10,0,8,8,8,8,0,10},
+		{0,0,7,1,1,7,0,0},
 		{8,7,1,1,1,1,7,8},
 		{8,1,1,1,1,1,1,8},
 		{8,1,1,1,1,1,1,8},
 		{8,7,1,1,1,1,7,8},
-		{8,7,7,1,1,7,7,8},
-		{10,8,8,8,8,8,8,10}
+		{0,0,7,1,1,7,0,0},
+		{10,0,8,8,8,8,0,10}
 		};
 
 	//when to switch which vMap is being referred to
-	int vMapSwap1 = 10; 
-	int vMapSwap2 = 40;
+	private int vMapSwap1 = 10; 
+	private int vMapSwap2 = 40;
 
 	public Game game;
 	
+	private double steepness, cutoff;
+	
 	public CompBPlayer (Game g){
+		this(g, 5, 45);
+	}
+	public CompBPlayer (Game g, double s, double c){
 		game = g;
+		steepness = s;
+		cutoff = c;
 		
 		int[] toMove = this.bestMove(this.availableMoves());
 		game.externalMove(toMove[0], toMove[1], 'B');
@@ -62,29 +69,72 @@ class CompBPlayer {
 	
 	//returns an [x,y] array of the best possible move
 	private int[] bestMove(ArrayList<Integer[]> l){
-		int maxIndex = 0;
-		for (int i = 1; i < l.size(); i++){
-			if (l.get(i)[2] > l.get(maxIndex)[2]){
-				maxIndex = i;
+		Integer[] temp;
+		int j;
+		for (int i = 1; i < l.size(); i++){ //sort best first
+			j = i;
+			while(l.get(j)[2].intValue() > l.get(j-1)[2].intValue()){
+				temp = l.get(j-1);
+				l.set(j-1,l.get(j));
+				l.set(j,temp);
+				j--;
+				if (j == 0){
+					break;
+				}
 			}
 		}
-		int out[] = {l.get(maxIndex)[0], l.get(maxIndex)[1]};
-		return out;
+		
+		double rand = Math.random();
+		int index;
+		if (l.size() == 1){
+			index = 0;
+		} else {
+			index = (rand > 0.25)? 0 : 1;
+		}
+		
+		int out[] = {l.get(index)[0].intValue(), l.get(index)[1].intValue()};
+		return out; 
 	}
 	
 	private int calcVal(int x, int y){
 		Game temp = new Game("OTHER"); //starts with no loop
 		temp.copy(game);
 		temp.externalMove(x,y,'B');
-		int score = temp.blackScore() - game.blackScore(); 
+		
+		double sRatio = Game.logistic(steepness, cutoff, game.turnNum());
+		double score = (temp.blackScore() - game.blackScore()) * sRatio; 
+		
 		if (game.turnNum() < vMapSwap1){
-			score += valueMap1[x][y];
+			for (int a = 0; a < 8; a++){
+				for (int b = 0; b < 8; b++){
+					if (temp.getBoard()[a][b] == 'B' && 
+						game.getBoard()[a][b] != 'B'){
+						score += valueMap1[a][b] * (1-sRatio);
+					}
+				}
+			}
+		
 		} else if (game.turnNum() < vMapSwap2){
-			score += valueMap2[x][y];
+			for (int a = 0; a < 8; a++){
+				for (int b = 0; b < 8; b++){
+					if (temp.getBoard()[a][b] == 'B' && 
+						game.getBoard()[a][b] != 'B'){
+						score += valueMap2[a][b] * (1-sRatio);	
+					}
+				}
+			}
 		} else {
-			score += valueMap3[x][y];
+			for (int a = 0; a < 8; a++){
+				for (int b = 0; b < 8; b++){
+					if (temp.getBoard()[a][b] == 'B' && 
+						game.getBoard()[a][b] != 'B'){
+						score += valueMap3[a][b] * (1-sRatio);
+					}
+				}
+			}
 		}
-		return score;
+		return (int)(score);
 	}
+	
 	
 }
