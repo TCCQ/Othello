@@ -34,11 +34,13 @@ board* nb() {
   return out;
 }
 
-int score (board* b) { //rework later
+int score (board* b) { // # of white tiles - # black tiles
   int s = 0;
   for (int x = 0; x < 8; x++) {
     for (int y = 0; y < 8; y++) {
-      if (isFilled(b,x,y) && isWhite(b,x,y)) s++;
+      if (isFilled(b,x,y)) {
+        s += (isWhite(b,x,y))? 1:-1; 
+      }
     }
   }
   return s;
@@ -128,10 +130,22 @@ std::string toString(board* b) {
     }
     out.push_back(esc);
     out += "[0m";
+    out += std::to_string(y);
     out += '\n';
   }
-  //out += esc + "[0m";
-  out.push_back(esc);
-  out += "[0m";
+  out += " 01234567\n";
+  return out;
+}
+
+std::vector<board*> children (board* b, bool playingWhite) {
+  std::vector<board*> out = std::vector<board*>();
+  board* d;
+  for (int x = 0; x < 8; x++) {
+    for (int y = 0; y < 8; y++) {
+      if ((d = move(b,playingWhite,x,y)) != nullptr) {
+        out.push_back(d);
+      }
+    }
+  }
   return out;
 }

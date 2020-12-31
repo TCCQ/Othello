@@ -1,6 +1,6 @@
 #include <string>
 #include <functional>
-
+#include <vector>
 
 struct board {
   char filled[8];
@@ -13,3 +13,4 @@ board* move(board*,bool,int,int);
 int tileNum(board*);
 void copy(board*, board*);
 std::string toString(board*);
+std::vector<board*> children(board*, bool);
