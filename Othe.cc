@@ -1,9 +1,9 @@
 #include <iostream>
 #include "Oboard.hh"
 #include <queue>
+#include <cmath>
 
-#define MAXQDEPTH 5
-//only use one of the above?
+int MAXQDEPTH;
 
 void getPlayerMove(int* a) { //takes x,y or x, y
   std::cout << "X coor: ";
@@ -41,7 +41,7 @@ void bestWorst (node* root) {
 }
 
 node* build (board* brd, int d) {
-  if (d >= MAXQDEPTH) {
+  if (d > MAXQDEPTH) {
     delete brd;
     return nullptr;
   }
@@ -52,9 +52,17 @@ node* build (board* brd, int d) {
   n->worst = -9999;
   n->children = std::vector<node*>();
 
-  for (board* b : children(brd, (tileNum(brd)%2 == 0))) {
-    node* adn = build(b,d+1);
-    if (adn != nullptr) n->children.push_back(adn);
+  std::vector<board*> cdrn = children(brd, whitesTurn(brd));
+  if (!cdrn.empty()) {
+    for (board* b : cdrn) {
+      node* adn = build(b,d+1);
+      if (adn != nullptr) n->children.push_back(adn);
+    }
+  } else { //catch if no legal moves
+    for (board* b : children(brd, !whitesTurn(brd))) {
+      node* adn = build(b,d+1);
+      if (adn != nullptr) n->children.push_back(adn);
+    }
   }
   return n;
 }
@@ -83,31 +91,54 @@ board* bestMove (board* current) {
   return out;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 //player is white
+
+  //arguments and defaults
+  int index = 1;
+  bool displayTypeBig = true;
+  MAXQDEPTH = 4; 
+  while (index < argc) {
+    if (std::string(argv[index]) == "-c") displayTypeBig = false; //compact mode
+    if (std::string(argv[index]) == "-q") {
+      if (argc <= index + 1) {
+        std::cout << "Illegal arguments" << std::endl;
+        return 1;
+      } else {
+        MAXQDEPTH = std::stoi(argv[index+1]);
+        index++;
+      }
+    }
+    index++;   
+  }
   int pm[2];
   board* b = nb();
   board* d;
-  std::cout << toString(b) << std::endl;
+  std::cout << toString(b,displayTypeBig) << std::endl;
   
-  while (tileNum(b) < 60) {
-    getPlayerMove(pm);
-    d = move(b,true,pm[0],pm[1]);
-
-    while (d == nullptr && (pm[0] != -1 && pm[1] != -1)) {
-      std::cout << "Illegal, try again. -1,-1 if no legal moves" <<std::endl;
+  while (tileNum(b) < 64) {
+    if (anyLegalMoves(b,true)) { //white can play
       getPlayerMove(pm);
       d = move(b,true,pm[0],pm[1]);
-    } 
-    if (pm[0] == -1 && pm[1] == -1) {
-      std::cout << "Gave up, white # was " << score(b) << std::endl;
-      return 0;
+
+      while (d == nullptr) {
+        std::cout << "Illegal, try again." <<std::endl;
+        getPlayerMove(pm);
+        d = move(b,true,pm[0],pm[1]);
+      } 
+      delete b;
+      b = d;
+    } else if (tileNum(b) != 64){
+      std::cout << "White had no legal moves, Black goes again" << std::endl;
     }
-    delete b;
-    b = d;
     //finished player turn
     
-    //std::cout << toString(b) << std::endl;
+    if (score(b) == std::abs(tileNum(b))) {
+      std::cout << toString(b,displayTypeBig) << std::endl;
+      std::cout << "White wins" << std::endl;
+      return 0;
+    }
+
     //start cpu turn
     /*
     int m = 0;
@@ -121,24 +152,30 @@ int main() {
       m++;
     }
     */
-    d = bestMove(b);
-    
-    if (d != nullptr) {
-      delete b;
-      b = d;
-    } else {
-      std::cout << "No legal moves" << std::endl;
-      if (score(b) > tileNum(b)-score(b)) std::cout << "White wins";
-      else std::cout << "Black wins";
-      std::cout << std::endl;
+    if (anyLegalMoves(b,false)) { //black can play
+      d = bestMove(b);
+      if (d != nullptr) {
+        delete b;
+        b = d;
+      } else {
+        std::cout << "You aren't supposed to be able to get here. no moves but has moves" << std::endl;
+        return 0;
+      }
+    } else if (tileNum(b) != 64){
+      std::cout << "Black had no legal moves, White goes again" << std::endl;
+    }
+    //end cpu turn
+
+    if (score(b) == std::abs(tileNum(b))) {
+      std::cout << toString(b,displayTypeBig) << std::endl;
+      std::cout << "Black wins" << std::endl;
       return 0;
     }
 
-    std::cout << toString(b) << std::endl;
-    //end cpu turn
+    std::cout << toString(b,displayTypeBig) << std::endl;
   }
 
-  if (score(b) > tileNum(b)-score(b)) std::cout << "White wins";
+  if (score(b) > 0) std::cout << "White wins";
   else std::cout << "Black wins";
   std::cout << std::endl;
   return 0;
