@@ -2,20 +2,20 @@
 
 const int order[8][2] = {{0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}};
 
-std::function<bool(board*,int,int)> isFilled = [](board* b, int x, int y) {
-  return (b->filled[y] & (0b10000000 >> x)) != 0;
+bool isFilled(board* b, int x, int y) {
+  return (b->filled[y] & (0b10000000 >> x));
 };
 
-std::function<bool(board*,int,int)> isWhite = [](board* b, int x, int y) {
-  return (b->coloredWhite[y] & (0b10000000 >> x)) != 0;
+bool isWhite(board* b, int x, int y) {
+  return (b->coloredWhite[y] & (0b10000000 >> x));
 };
 
-std::function<void(board*,int,int)> flipToWhite = [](board* b, int x, int y) {
+void flipToWhite(board* b, int x, int y) {
   b->filled[y] = b->filled[y] | (0b10000000 >> x);
   b->coloredWhite[y] = b->coloredWhite[y] | (0b10000000 >> x);
 };
 
-std::function<void(board*,int,int)> flipToBlack = [](board* b, int x, int y) {
+void flipToBlack(board* b, int x, int y) {
   b->filled[y] = b->filled[y] | (0b10000000 >> x);
   b->coloredWhite[y] = b->coloredWhite[y] & (~(0b10000000 >> x));
 };
@@ -31,37 +31,22 @@ board* nb() {
       out->coloredWhite[i] = 0;
     }
   }
-  out->whitesTurn = true;
+  out->turnAndTile = 0b10000100; //white's turn and 4 pieces on board
+  out->score = 0;
   return out;
 }
 
 int score (board* b) { // # of white tiles - # black tiles
-  int s = 0;
-  for (int x = 0; x < 8; x++) {
-    for (int y = 0; y < 8; y++) {
-      if (isFilled(b,x,y)) {
-        s += (isWhite(b,x,y))? 1:-1; 
-      }
-    }
-  }
-  return s;
+  return b->score;
 }
 
 int tileNum (board* b) {
-  int s = 0;
-  for (int x = 0; x < 8; x++) {
-    for (int y = 0; y < 8; y++) {
-      if (isFilled(b,x,y)) s++;
-    }
-  }
-  return s;
+  return (int)(b->turnAndTile & 0b01111111); //last seven bits
 }
 
 board* move(board* b, bool playWhite, int x, int y) {
   if (x > 7 || x < 0 || y > 7 || y < 0) return nullptr;
   if (isFilled(b,x,y)) return nullptr;
-  board* c = new board;
-  copy(b,c);
   int tmpx, tmpy, distance, end;
   int toFlip[8];
   for (int ray = 0; ray < 8; ray++) { //iter over cardinal + diagonals
@@ -78,7 +63,7 @@ board* move(board* b, bool playWhite, int x, int y) {
     }
     if (end == 3) toFlip[ray] = distance;
     else toFlip[ray] = 0;
-  } //checked all rays and popilated toFlip
+  } //checked all rays and populated toFlip
 
   bool legal = false;
   for (int i : toFlip) { //any legal flips from playing here?
@@ -89,16 +74,30 @@ board* move(board* b, bool playWhite, int x, int y) {
   }
 
   if (legal) {
+    int numFlipped = 0;
+    board* c = new board;
+    copy(b,c);
     for (int r = 0; r < 8; r++) { //rays, must be at least 1 that is > 0
-      for (int d = 0; d < toFlip[r]; d++) { //above calced length, start 0 to flip x,y (happens more than once)
+      if (toFlip[r] != 0) numFlipped += toFlip[r]-1;
+      for (int d = 1; d < toFlip[r]; d++) { //above calced length
         if (playWhite) flipToWhite(c, x + (d*order[r][0]), y + (d*order[r][1])); //update board c according to color
         else flipToBlack(c, x + (d*order[r][0]), y + (d*order[r][1]));
       }
     }
-    c->whitesTurn = !playWhite; //not who just played
+    if (playWhite) flipToWhite(c,x,y); //place new tile
+    else flipToBlack(c,x,y);
+
+    numFlipped = (2*numFlipped)+1; //account for placed tile and that score -1 for lost white and -1 from new black of each flip. thus 2*flip + 1
+    char tn = (b->turnAndTile & 0b01111111) + 1;
+    if (!playWhite) {
+      tn = tn | 0b10000000; //change turn back. if just played white, then its B's turn and it can stay as a 0;
+      c->score = b->score - numFlipped; //play black, score decreases
+    } else {
+      c->score = b->score + numFlipped; //play white, score increases
+    }
+    c->turnAndTile = tn;
     return c;
   } else { //not legal
-    delete c;
     return nullptr;
   }
 }
@@ -107,8 +106,9 @@ void copy(board* from, board* to) {
   for (int i = 0; i < 8; i++) {
     to->filled[i] = from->filled[i];
     to->coloredWhite[i] = from->coloredWhite[i];
-    to->whitesTurn = from->whitesTurn;
   }
+  to->turnAndTile = from->turnAndTile;
+  to->score = from->score;
 }
 
 std::string toString(board* b, bool big) {
@@ -220,7 +220,7 @@ std::vector<board*> children (board* b, bool playingWhite) {
 }
 
 bool whitesTurn(board* b) {
-  return b->whitesTurn;
+  return ((b->turnAndTile & 0b10000000) != 0);
 }
 
 bool isLegal(board* b, bool playWhite, int x, int y) { //slightly modified version of move()

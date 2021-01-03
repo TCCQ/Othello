@@ -1,11 +1,11 @@
 #include <string>
-#include <functional>
 #include <vector>
 
 struct board {
   char filled[8];
   char coloredWhite[8];
-  bool whitesTurn;//wasteful?
+  char turnAndTile; //first bit is isWhite'sTurn, last 7 are number of tiles on board
+  signed char score;
 };
 
 board* nb();

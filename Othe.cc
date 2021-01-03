@@ -32,8 +32,12 @@ void bestWorst (node* root) {
       if (n->best == 9999 || n->worst == -9999) {
         bestWorst(n);
       }
-      if (n->best < b) b = n->best; //sign fliped cause cpu plays black
-      if (n->worst > w) w = n->worst;
+      if (n->best < b) b = n->best; //sign fliped cause cpu plays black. best case: cpu smart, player dumb
+      if (whitesTurn(n->item)) { //worst case: cpu smart, player smart. IF PLAYER JUST PLAYED
+        if (n->worst > w) w = n->worst;
+      } else { //CPU JUST PLAYED. should _always_ take the better move, even in worst case calculations
+        if (n->best < b) w = n->worst;
+      }
     }
     root->best = b;
     root->worst = w;
@@ -114,6 +118,7 @@ int main(int argc, char* argv[]) {
   int pm[2];
   board* b = nb();
   board* d;
+  int turnCase = 0;
   std::cout << toString(b,displayTypeBig) << std::endl;
   
   while (tileNum(b) < 64) {
@@ -129,7 +134,7 @@ int main(int argc, char* argv[]) {
       delete b;
       b = d;
     } else if (tileNum(b) != 64){
-      std::cout << "White had no legal moves, Black goes again" << std::endl;
+      turnCase = 1;
     }
     //finished player turn
     
@@ -140,29 +145,14 @@ int main(int argc, char* argv[]) {
     }
 
     //start cpu turn
-    /*
-    int m = 0;
-    while (m < 63) {
-      if ((d = move(b,false,m%8,m/8)) != nullptr) {
-        delete b;
-        b = d;
-        std::cout << std::to_string(m%8) << " " << std::to_string(m/8) << std::endl;
-        break;
-      }
-      m++;
-    }
-    */
     if (anyLegalMoves(b,false)) { //black can play
       d = bestMove(b);
       if (d != nullptr) {
         delete b;
         b = d;
-      } else {
-        std::cout << "You aren't supposed to be able to get here. no moves but has moves" << std::endl;
-        return 0;
       }
     } else if (tileNum(b) != 64){
-      std::cout << "Black had no legal moves, White goes again" << std::endl;
+      turnCase = 2;
     }
     //end cpu turn
 
@@ -173,6 +163,14 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << toString(b,displayTypeBig) << std::endl;
+    if (turnCase != 0) {
+      if (turnCase == 1) {
+        std::cout << "White had no legal moves, Black goes again" << std::endl;
+      } else {
+        std::cout << "Black had no legal moves, White goes again" << std::endl;
+      }
+      turnCase = 0;
+    }
   }
 
   if (score(b) > 0) std::cout << "White wins";

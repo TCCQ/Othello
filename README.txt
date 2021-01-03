@@ -8,6 +8,8 @@ Usage: try [-c, -q n]
 
 Tentative and inaccurate analysis shows that CPU usage is quite high and extremely liable to spike, as all computation happens during the computer's turn, largely as fast as possible, as time spent copying memory etc. is minimized. Depths above 5 are enough to give a 2.6 GHz CPU a 99% usage rating for several seconds. Thought will be given to how to balance memory usage and CPU load. More analysis will inform that choice. Adding a argument switch for CPU vs RAM priority will be considered. 
 
+Performance analysis was performed using gcov and gprof (requires compiling and linking with "-pg --coverage"). After consiterations, the size of one board instance was increased by two bytes (16 to 18 bytes) in order to allow for one player to take multiple turns in a row, and to cache score and tile number. Both score() and tileNum() were contributing roughly 20% of the total computation time, and are now performed in constant, negligible time. 
+
 Feel free to steal this and credit me.
 
 This branch is much more likely to be updated than main.
