@@ -2,51 +2,53 @@
 
 const int order[8][2] = {{0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}};
 
-bool isFilled(board* b, int x, int y) {
-  return (b->filled[y] & (0b10000000 >> x));
+bool Board::isFilled(int x, int y) {
+  return (filled[y] & (0b10000000 >> x));
 };
 
-bool isWhite(board* b, int x, int y) {
-  return (b->coloredWhite[y] & (0b10000000 >> x));
+bool Board::isWhite(int x, int y) {
+  return (coloredWhite[y] & (0b10000000 >> x));
 };
 
-void flipToWhite(board* b, int x, int y) {
-  b->filled[y] = b->filled[y] | (0b10000000 >> x);
-  b->coloredWhite[y] = b->coloredWhite[y] | (0b10000000 >> x);
+void Board::flipToWhite(int x, int y) {
+  filled[y] = filled[y] | (0b10000000 >> x);
+  coloredWhite[y] = coloredWhite[y] | (0b10000000 >> x);
 };
 
-void flipToBlack(board* b, int x, int y) {
-  b->filled[y] = b->filled[y] | (0b10000000 >> x);
-  b->coloredWhite[y] = b->coloredWhite[y] & (~(0b10000000 >> x));
+void Board::flipToBlack(int x, int y) {
+  filled[y] = filled[y] | (0b10000000 >> x);
+  coloredWhite[y] = coloredWhite[y] & (~(0b10000000 >> x));
 };
 
-board* nb() {
-  board* out = new board;
+Board::Board() {
   for (int i = 0; i < 8; i++) {
     if (i < 5 && i > 2) {
-      out->filled[i] = 0b00011000;
-      out->coloredWhite[i] = (i==3)? 0b00001000:0b00010000;
+      filled[i] = 0b00011000;
+      coloredWhite[i] = (i==3)? 0b00001000:0b00010000;
     } else {
-      out->filled[i] = 0;
-      out->coloredWhite[i] = 0;
+      filled[i] = 0;
+      coloredWhite[i] = 0;
     }
   }
-  out->turnAndTile = 0b10000100; //white's turn and 4 pieces on board
-  out->score = 0;
-  return out;
+  turnAndTile = 0b10000100; //white's turn and 4 pieces on Board
+  scoreInt = 0;
 }
 
-int score (board* b) { // # of white tiles - # black tiles
-  return b->score;
+Board::Board(Board* b) {
+  this->copy(b);
 }
 
-int tileNum (board* b) {
-  return (int)(b->turnAndTile & 0b01111111); //last seven bits
+int Board::score () { // # of white tiles - # black tiles
+  return this->scoreInt;
 }
 
-board* move(board* b, bool playWhite, int x, int y) {
+int Board::tileNum () {
+  return (int)(turnAndTile & 0b01111111); //last seven bits
+}
+
+Board* Board::move(bool playWhite, int x, int y) {
   if (x > 7 || x < 0 || y > 7 || y < 0) return nullptr;
-  if (isFilled(b,x,y)) return nullptr;
+  if (isFilled(x,y)) return nullptr;
   int tmpx, tmpy, distance, end;
   int toFlip[8];
   for (int ray = 0; ray < 8; ray++) { //iter over cardinal + diagonals
@@ -57,8 +59,8 @@ board* move(board* b, bool playWhite, int x, int y) {
       tmpy = y + (distance*order[ray][1]);
 
       if (tmpx < 0 || tmpx > 7 || tmpy < 0 || tmpy > 7) end = 1; //ran off edge
-      else if (!isFilled(b,tmpx,tmpy)) end = 2; //ran into an empty space
-      else if (isWhite(b,tmpx,tmpy) == playWhite) end = (distance > 1)? 3:4; //ran into own color late vs early
+      else if (!isFilled(tmpx,tmpy)) end = 2; //ran into an empty space
+      else if (isWhite(tmpx,tmpy) == playWhite) end = (distance > 1)? 3:4; //ran into own color late vs early
       else distance++;
     }
     if (end == 3) toFlip[ray] = distance;
@@ -75,25 +77,25 @@ board* move(board* b, bool playWhite, int x, int y) {
 
   if (legal) {
     int numFlipped = 0;
-    board* c = new board;
-    copy(b,c);
+    Board* c = new Board(this);
+
     for (int r = 0; r < 8; r++) { //rays, must be at least 1 that is > 0
       if (toFlip[r] != 0) numFlipped += toFlip[r]-1;
       for (int d = 1; d < toFlip[r]; d++) { //above calced length
-        if (playWhite) flipToWhite(c, x + (d*order[r][0]), y + (d*order[r][1])); //update board c according to color
-        else flipToBlack(c, x + (d*order[r][0]), y + (d*order[r][1]));
+        if (playWhite) c->flipToWhite(x + (d*order[r][0]), y + (d*order[r][1])); //update Board c according to color
+        else c->flipToBlack(x + (d*order[r][0]), y + (d*order[r][1]));
       }
     }
-    if (playWhite) flipToWhite(c,x,y); //place new tile
-    else flipToBlack(c,x,y);
+    if (playWhite) c->flipToWhite(x,y); //place new tile
+    else c->flipToBlack(x,y);
 
     numFlipped = (2*numFlipped)+1; //account for placed tile and that score -1 for lost white and -1 from new black of each flip. thus 2*flip + 1
-    char tn = (b->turnAndTile & 0b01111111) + 1;
+    char tn = (this->turnAndTile & 0b01111111) + 1;
     if (!playWhite) {
       tn = tn | 0b10000000; //change turn back. if just played white, then its B's turn and it can stay as a 0;
-      c->score = b->score - numFlipped; //play black, score decreases
+      c->scoreInt = this->scoreInt - numFlipped; //play black, score decreases
     } else {
-      c->score = b->score + numFlipped; //play white, score increases
+      c->scoreInt = this->scoreInt + numFlipped; //play white, score increases
     }
     c->turnAndTile = tn;
     return c;
@@ -102,25 +104,25 @@ board* move(board* b, bool playWhite, int x, int y) {
   }
 }
 
-void copy(board* from, board* to) {
+void Board::copy(Board* from) {
   for (int i = 0; i < 8; i++) {
-    to->filled[i] = from->filled[i];
-    to->coloredWhite[i] = from->coloredWhite[i];
+    filled[i] = from->filled[i];
+    coloredWhite[i] = from->coloredWhite[i];
   }
-  to->turnAndTile = from->turnAndTile;
-  to->score = from->score;
+  turnAndTile = from->turnAndTile;
+  scoreInt = from->scoreInt;
 }
 
-std::string toString(board* b, bool big) {
-  if (big) return toStringBig(b);
-  else return toStringSmall(b);
+std::string Board::toString(bool big) {
+  if (big) return toStringBig();
+  else return toStringSmall();
 }
 
-std::string toString(board* b) {
-  return toString(b,false);
+std::string Board::toString() {
+  return toString(false);
 }
 
-std::string toStringSmall(board* b) {
+std::string Board::toStringSmall() {
   std::string out = " 01234567\n";
   const char esc = 27;
   std::string fg, bg, tile;
@@ -128,9 +130,9 @@ std::string toStringSmall(board* b) {
     out += std::to_string(y);
     for (int x = 0; x < 8; x++) {
       bg = (y%2 == x%2)? "42":"43";
-      fg = (isWhite(b,x,y))? "37":"30";
-      tile = (isWhite(b,x,y))? "W":"B";
-      if (!isFilled(b,x,y)) tile = " ";
+      fg = (isWhite(x,y))? "37":"30";
+      tile = (isWhite(x,y))? "W":"B";
+      if (!isFilled(x,y)) tile = " ";
       //out += esc + "[" + fg + ";" + bg + "m" + tile;
       out.push_back(esc);
       out.push_back('[');
@@ -149,7 +151,7 @@ std::string toStringSmall(board* b) {
   return out;
 }
 
-std::string toStringBig(board* b) {
+std::string Board::toStringBig() {
   std::string out = "";
   const char esc = 27;
   std::string fg,bg,tile;
@@ -178,9 +180,9 @@ std::string toStringBig(board* b) {
     out += std::to_string(y);
     for (int x = 0; x < 8; x++) {
       bg = (y%2 == x%2)? "42":"43";
-      fg = (isWhite(b,x,y))? "37":"30";
-      if (isFilled(b,x,y)){
-        tile = (isWhite(b,x,y))? "W":"B"; 
+      fg = (isWhite(x,y))? "37":"30";
+      if (isFilled(x,y)){
+        tile = (isWhite(x,y))? "W":"B"; 
       } else tile = " ";
       out.push_back(esc);
       out.push_back('[');
@@ -206,12 +208,12 @@ std::string toStringBig(board* b) {
   return out;
 }
 
-std::vector<board*> children (board* b, bool playingWhite) {
-  std::vector<board*> out = std::vector<board*>();
-  board* d;
+std::vector<Board*> Board::children (bool playingWhite) {
+  std::vector<Board*> out = std::vector<Board*>();
+  Board* d;
   for (int x = 0; x < 8; x++) {
     for (int y = 0; y < 8; y++) {
-      if ((d = move(b,playingWhite,x,y)) != nullptr) {
+      if ((d = move(playingWhite,x,y)) != nullptr) {
         out.push_back(d);
       }
     }
@@ -219,13 +221,13 @@ std::vector<board*> children (board* b, bool playingWhite) {
   return out;
 }
 
-bool whitesTurn(board* b) {
-  return ((b->turnAndTile & 0b10000000) != 0);
+bool Board::whitesTurn() {
+  return ((turnAndTile & 0b10000000) != 0);
 }
 
-bool isLegal(board* b, bool playWhite, int x, int y) { //slightly modified version of move()
+bool Board::isLegal(bool playWhite, int x, int y) { //slightly modified version of move()
   if (x > 7 || x < 0 || y > 7 || y < 0) return false;
-  if (isFilled(b,x,y)) return false;
+  if (isFilled(x,y)) return false;
   int tmpx, tmpy, distance, end;
   for (int ray = 0; ray < 8; ray++) { //iter over cardinal + diagonals
     distance = 1;
@@ -235,8 +237,8 @@ bool isLegal(board* b, bool playWhite, int x, int y) { //slightly modified versi
       tmpy = y + (distance*order[ray][1]);
 
       if (tmpx < 0 || tmpx > 7 || tmpy < 0 || tmpy > 7) end = 1; //ran off edge
-      else if (!isFilled(b,tmpx,tmpy)) end = 2; //ran into an empty space
-      else if (isWhite(b,tmpx,tmpy) == playWhite) end = (distance > 1)? 3:4; //ran into own color late vs early
+      else if (!isFilled(tmpx,tmpy)) end = 2; //ran into an empty space
+      else if (isWhite(tmpx,tmpy) == playWhite) end = (distance > 1)? 3:4; //ran into own color late vs early
       else distance++;
     }
     if (end == 3) return true;
@@ -245,10 +247,10 @@ bool isLegal(board* b, bool playWhite, int x, int y) { //slightly modified versi
   return false;
 }
 
-bool anyLegalMoves(board* b, bool playWhite) {
+bool Board::anyLegalMoves(bool playWhite) {
   for (int x = 0; x < 8; x++) {
     for (int y = 0; y < 8; y++) {
-      if (isLegal(b,playWhite,x,y)) return true;
+      if (isLegal(playWhite,x,y)) return true;
     }
   }
   return false;
