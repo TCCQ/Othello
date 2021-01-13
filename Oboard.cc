@@ -42,6 +42,27 @@ int Board::score () { // # of white tiles - # black tiles
   return this->scoreInt;
 }
 
+int Board::value() {
+  int value = this->scoreInt;
+
+  //maybe add linear change to value of score vs terriory?
+
+  const int cornerVal = 6; //how much more valuable is a corner than any other flip
+  if (isFilled(0,0)) {
+    value += (isWhite(0,0))? cornerVal:-1*cornerVal;
+  }
+  if (isFilled(0,7)) {
+    value += (isWhite(0,7))? cornerVal:-1*cornerVal;
+  }
+  if (isFilled(7,0)) {
+    value += (isWhite(7,0))? cornerVal:-1*cornerVal;
+  }
+  if (isFilled(7,7)) {
+    value += (isWhite(7,7))? cornerVal:-1*cornerVal;
+  }
+  return value;
+}
+
 int Board::tileNum () {
   return (int)(turnAndTile & 0b01111111); //last seven bits
 }
@@ -181,6 +202,7 @@ std::string Board::toStringBig() {
     for (int x = 0; x < 8; x++) {
       bg = (y%2 == x%2)? "42":"43";
       fg = (isWhite(x,y))? "37":"30";
+      tile = " "; // consider revising
       if (isFilled(x,y)){
         tile = (isWhite(x,y))? "W":"B"; 
       } else tile = " ";

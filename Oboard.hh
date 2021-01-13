@@ -17,6 +17,7 @@ class Board {
     Board();
     Board(Board*);
     int score();
+    int value();
     Board* move(bool,int,int);
     int tileNum();
     void copy(Board*);

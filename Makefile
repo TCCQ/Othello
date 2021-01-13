@@ -1,4 +1,4 @@
-ARGS = -std=c++11
+ARGS = -std=c++11 
 
 all: Oboard.o Othe.o othe
 clean:

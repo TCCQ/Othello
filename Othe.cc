@@ -22,8 +22,8 @@ struct node {
 
 void bestWorst (node* root) {
   if (root->children.empty()) {
-    root->best = root->item->score();
-    root->worst = root->item->score();
+    root->best = root->item->value();
+    root->worst = root->item->value();
   } else {
     int b,w;
     b = 9999;
@@ -33,11 +33,14 @@ void bestWorst (node* root) {
         bestWorst(n);
       }
       if (n->best < b) b = n->best; //sign fliped cause cpu plays black. best case: cpu smart, player dumb
-      if (n->item->whitesTurn()) { //worst case: cpu smart, player smart. IF PLAYER JUST PLAYED
+      //if (n->worst > w) w = n->worst;
+      
+      if (root->item->whitesTurn()) { //worst case: cpu smart, player smart. IF PLAYER JUST PLAYED
         if (n->worst > w) w = n->worst;
       } else { //CPU JUST PLAYED. should _always_ take the better move, even in worst case calculations
-        if (n->best < b) w = n->worst;
+        if (n->best == b) w = n->worst; //need to check for equal, if best < b, then was changed above
       }
+      
     }
     root->best = b;
     root->worst = w;
