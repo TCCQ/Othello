@@ -1,3 +1,6 @@
+This is my original java version. It is slow, poorly written, and as of this commit abandoned. I will leave it in this side branch to work as an archive. Use the other branches
+
+
 This is a program to simulate the Othello Board game in Java.
 Othello is also sometimes called Reversi.
 This is a work in progress.
