@@ -47,7 +47,7 @@ int Board::value() {
 
   //maybe add linear change to value of score vs terriory?
 
-  const int cornerVal = 6; //how much more valuable is a corner than any other flip
+  const int cornerVal = 8; //how much more valuable is a corner than any other flip
   if (isFilled(0,0)) {
     value += (isWhite(0,0))? cornerVal:-1*cornerVal;
   }
@@ -230,13 +230,13 @@ std::string Board::toStringBig() {
   return out;
 }
 
-std::vector<Board*> Board::children (bool playingWhite) {
-  std::vector<Board*> out = std::vector<Board*>();
+std::deque<Board*> Board::children (bool playingWhite) {
+  std::deque<Board*> out = std::deque<Board*>();
   Board* d;
   for (int x = 0; x < 8; x++) {
     for (int y = 0; y < 8; y++) {
       if ((d = move(playingWhite,x,y)) != nullptr) {
-        out.push_back(d);
+        out.push_front(d);
       }
     }
   }
@@ -277,3 +277,12 @@ bool Board::anyLegalMoves(bool playWhite) {
   }
   return false;
 }
+
+bool Board::operator==(const Board& b) {
+  if (turnAndTile != b.turnAndTile) return false;
+  for (int i : {3,4,2,5,1,6,0,7}) {
+    if (!(filled[i] == b.filled[i] && coloredWhite[i] == b.coloredWhite[i])) return false;
+  }
+  return true;
+}
+

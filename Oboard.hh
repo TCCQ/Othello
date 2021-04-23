@@ -1,5 +1,5 @@
 #include <string>
-#include <vector>
+#include <deque>
 
 class Board {
   private:
@@ -25,8 +25,9 @@ class Board {
     std::string toStringBig();
     std::string toString();
     std::string toString(bool);
-    std::vector<Board*> children(bool);
+    std::deque<Board*> children(bool);
     bool whitesTurn();
     bool isLegal(bool, int, int);
     bool anyLegalMoves(bool);
+    bool operator==(const Board&);
 };
